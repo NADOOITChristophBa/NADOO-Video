@@ -5,17 +5,28 @@ import socket
 import time
 
 REQUIRED = [
-    'torch', 'diffusers', 'transformers', 'gradio', 'sentencepiece', 'pillow',
-    'av', 'numpy', 'scipy', 'requests', 'einops', 'opencv_contrib_python', 'safetensors'
+    ('torch', 'torch'),
+    ('diffusers', 'diffusers'),
+    ('transformers', 'transformers'),
+    ('gradio', 'gradio'),
+    ('sentencepiece', 'sentencepiece'),
+    ('PIL', 'pillow'),
+    ('av', 'av'),
+    ('numpy', 'numpy'),
+    ('scipy', 'scipy'),
+    ('requests', 'requests'),
+    ('einops', 'einops'),
+    ('cv2', 'opencv-contrib-python'),
+    ('safetensors', 'safetensors')
 ]
 
 def test_imports():
     failed = []
-    for pkg in REQUIRED:
+    for import_name, pip_name in REQUIRED:
         try:
-            importlib.import_module(pkg)
+            importlib.import_module(import_name)
         except ImportError:
-            failed.append(pkg)
+            failed.append(pip_name)
     if failed:
         print("Missing packages:", ', '.join(failed))
         return False

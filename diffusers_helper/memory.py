@@ -78,13 +78,19 @@ def get_cuda_free_memory_gb(device=None):
     if device is None:
         device = gpu
 
-    memory_stats = torch.cuda.memory_stats(device)
-    bytes_active = memory_stats['active_bytes.all.current']
-    bytes_reserved = memory_stats['reserved_bytes.all.current']
-    bytes_free_cuda, _ = torch.cuda.mem_get_info(device)
-    bytes_inactive_reserved = bytes_reserved - bytes_active
-    bytes_total_available = bytes_free_cuda + bytes_inactive_reserved
-    return bytes_total_available / (1024 ** 3)
+    if device.type != 'cuda':
+        # For MPS or CPU, just return 0 (or a dummy value)
+        return 0
+    try:
+        torch.cuda.synchronize(device)
+        memory_stats = torch.cuda.memory_stats(device)
+        bytes_active = memory_stats['active_bytes.all.current']
+        bytes_reserved = memory_stats['reserved_bytes.all.current']
+        total = torch.cuda.get_device_properties(device).total_memory
+        free = total - bytes_reserved + (bytes_reserved - bytes_active)
+        return free / (1024 ** 3)
+    except Exception:
+        return 0
 
 
 def move_model_to_device_with_memory_preservation(model, target_device, preserved_memory_gb=0):

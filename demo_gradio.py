@@ -31,14 +31,15 @@ from diffusers_helper.bucket_tools import find_nearest_bucket
 parser = argparse.ArgumentParser()
 parser.add_argument('--share', action='store_true')
 parser.add_argument("--server", type=str, default='0.0.0.0')
-parser.add_argument("--port", type=int, required=False)
-parser.add_argument("--inbrowser", action='store_true')
+parser.add_argument("--port", type=int, default=7860, required=False)
+parser.add_argument("--inbrowser", action='store_true', default=True)  # Always open browser
 args = parser.parse_args()
 
 # for win desktop probably use --server 127.0.0.1 --inbrowser
 # For linux server probably use --server 127.0.0.1 or do not use any cmd flags
 
 print(args)
+print(f"\nINFO: Das Webinterface wird nach dem Laden unter http://127.0.0.1:{args.port} erreichbar sein.")
 
 free_mem_gb = get_cuda_free_memory_gb(gpu)
 high_vram = free_mem_gb > 60
@@ -49,6 +50,7 @@ print(f'High-VRAM Mode: {high_vram}')
 text_encoder = LlamaModel.from_pretrained("hunyuanvideo-community/HunyuanVideo", subfolder='text_encoder', torch_dtype=torch.float16).cpu()
 tokenizer = LlamaTokenizerFast.from_pretrained("hunyuanvideo-community/HunyuanVideo", subfolder='tokenizer')
 tokenizer_2 = CLIPTokenizer.from_pretrained("hunyuanvideo-community/HunyuanVideo", subfolder='tokenizer_2')
+print("INFO: Modell-Download startet ggf. jetzt. Bitte habe Geduld, das kann mehrere Minuten dauern – Fortschritt siehst du ggf. erst nach einer Weile.")
 vae = AutoencoderKLHunyuanVideo.from_pretrained("hunyuanvideo-community/HunyuanVideo", subfolder='vae', torch_dtype=torch.float16).to(gpu)
 
 feature_extractor = SiglipImageProcessor.from_pretrained("lllyasviel/flux_redux_bfl", subfolder='feature_extractor')
@@ -401,9 +403,22 @@ with block:
     end_button.click(fn=end_process)
 
 
-block.launch(
-    server_name=args.server,
-    server_port=args.port,
-    share=args.share,
-    inbrowser=args.inbrowser,
-)
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+try:
+    print("INFO: Modelle und Interface werden geladen. Bitte warten ...")
+    block.launch(
+        server_name=args.server,
+        server_port=args.port,
+        share=args.share,
+        inbrowser=args.inbrowser,
+        debug=True
+    )
+    print(f"INFO: Gradio-Interface sollte jetzt unter http://127.0.0.1:{args.port} erreichbar sein.")
+except Exception as e:
+    import traceback
+    print("\n!!! FEHLER beim Start des Webinterfaces !!!")
+    traceback.print_exc()
+    print("!!! Bitte teile diese Fehlermeldung mit !!!")
+

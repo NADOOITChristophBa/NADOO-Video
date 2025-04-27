@@ -28,15 +28,36 @@ from diffusers_helper.clip_vision import hf_clip_vision_encode
 from diffusers_helper.bucket_tools import find_nearest_bucket
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--share', action='store_true')
-parser.add_argument("--server", type=str, default='0.0.0.0')
-parser.add_argument("--port", type=int, default=7860, required=False)
-parser.add_argument("--inbrowser", action='store_true', default=True)  # Always open browser
+parser = argparse.ArgumentParser(description="NADOO-Video: Hardware/Leistung steuerbar starten")
+parser.add_argument('--share', action='store_true', help='Gradio share mode')
+parser.add_argument("--server", type=str, default='0.0.0.0', help='Server address')
+parser.add_argument("--port", type=int, default=7860, required=False, help='Port')
+parser.add_argument("--inbrowser", action='store_true', default=True, help='Browser automatisch öffnen')
+parser.add_argument("--device", type=str, choices=['cpu', 'mps', 'cuda'], default=None, help='Gerät: cpu, mps (Apple), cuda (Nvidia)')
+parser.add_argument("--max-vram", type=float, default=None, help='Maximaler VRAM in GB (nur Hinweis, ggf. nicht garantiert)')
+parser.add_argument("--max-ram", type=float, default=None, help='Maximaler RAM in GB (nur Hinweis)')
+parser.add_argument("--num-threads", type=int, default=None, help='Maximale CPU-Threads')
 args = parser.parse_args()
 
-# for win desktop probably use --server 127.0.0.1 --inbrowser
-# For linux server probably use --server 127.0.0.1 or do not use any cmd flags
+# Geräteauswahl
+if args.device == 'cpu':
+    gpu = cpu
+elif args.device == 'mps':
+    gpu = torch.device('mps')
+elif args.device == 'cuda':
+    gpu = torch.device('cuda:0') if torch.cuda.is_available() else cpu
+# else: auto-detect (wie gehabt)
+
+# Threads setzen
+if args.num_threads is not None:
+    torch.set_num_threads(args.num_threads)
+    print(f"INFO: Maximale CPU-Threads auf {args.num_threads} gesetzt.")
+
+# Hinweis zu Speicherlimits
+if args.max_vram is not None:
+    print(f"INFO: VRAM-Limit (nur Hinweis, nicht garantiert): {args.max_vram} GB")
+if args.max_ram is not None:
+    print(f"INFO: RAM-Limit (nur Hinweis, nicht garantiert): {args.max_ram} GB")
 
 print(args)
 print(f"\nINFO: Das Webinterface wird nach dem Laden unter http://127.0.0.1:{args.port} erreichbar sein.")
@@ -47,7 +68,30 @@ high_vram = free_mem_gb > 60
 print(f'Free VRAM {free_mem_gb} GB')
 print(f'High-VRAM Mode: {high_vram}')
 
+# Hardware-Auswahl als Tab für das Hauptinterface
+def on_hardware_change(device, num_threads):
+    print(f"[UI] Hardware-Wunsch: Gerät={device}, Threads={num_threads}")
+    print("Bitte das Programm mit den gewünschten Einstellungen neu starten:")
+    print(f"python3 demo_gradio.py --device {device} --num-threads {num_threads}")
+    return f"Bitte das Programm mit --device {device} --num-threads {num_threads} neu starten! (Automatischer Wechsel zur Laufzeit ist nicht möglich.)"
+
+hardware_tab = gr.Tab(
+    gr.Interface(
+        fn=on_hardware_change,
+        inputs=[
+            gr.Dropdown(['auto', 'cpu', 'mps', 'cuda'], value=args.device or 'auto', label='Gerät'),
+            gr.Number(value=args.num_threads or 4, label='Threads (CPU)', precision=0)
+        ],
+        outputs="text",
+        title="Hardware-Auswahl",
+        description="Wähle Gerät und Threads. Änderung erfordert Neustart!"
+    ),
+    label="Hardware-Auswahl"
+)
+# Später im Haupt-UI: Tabs([... , hardware_tab])
+
 text_encoder = LlamaModel.from_pretrained("hunyuanvideo-community/HunyuanVideo", subfolder='text_encoder', torch_dtype=torch.float16).cpu()
+text_encoder_2 = CLIPTextModel.from_pretrained("hunyuanvideo-community/HunyuanVideo", subfolder='text_encoder_2', torch_dtype=torch.float16).cpu()
 tokenizer = LlamaTokenizerFast.from_pretrained("hunyuanvideo-community/HunyuanVideo", subfolder='tokenizer')
 tokenizer_2 = CLIPTokenizer.from_pretrained("hunyuanvideo-community/HunyuanVideo", subfolder='tokenizer_2')
 print("INFO: Modell-Download startet ggf. jetzt. Bitte habe Geduld, das kann mehrere Minuten dauern – Fortschritt siehst du ggf. erst nach einer Weile.")

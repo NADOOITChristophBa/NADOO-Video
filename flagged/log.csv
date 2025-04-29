@@ -1,0 +1,3 @@
+Algorithmus,Blöcke (B),Chunks pro Block (C),Aktive Chunks (k),Rechenzeit pro Chunk (t),Anzahl Chunks (N),q_high (Bit),q_mid (Bit),q_low (Bit),% High Aktivität,% Mid Aktivität,Geräte (Async),Min. Rechenzeit (Async),Max. Rechenzeit (Async),output,flag,username,timestamp
+[],6,12,3,1,32,32,8,1,0.2,0.5,8,1,3,,,,2025-04-29 00:05:24.703155
+[],10,12,3,1,32,32,8,1,0.2,0.5,32,1,3,/Users/christophbackhaus/Documents/GitHub/NADOO-Video/flagged/output/tmpawz_9x4e.json,,,2025-04-29 00:07:30.538099

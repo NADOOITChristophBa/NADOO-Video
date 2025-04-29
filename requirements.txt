@@ -13,3 +13,5 @@ torchsde==0.2.6
 einops
 opencv-contrib-python
 safetensors
+memory-profiler==0.58.0
+pyRAPL
